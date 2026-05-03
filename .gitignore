@@ -1,0 +1,20 @@
+# Local/system files
+.DS_Store
+Thumbs.db
+
+# Secrets / credentials
+.env
+*.env
+config/*.php
+**/config.php
+**/database.php
+**/db.php
+**/credentials.php
+
+# Exports / generated files
+exports/
+*.zip
+
+# Logs
+*.log
+logs/
