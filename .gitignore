@@ -2,6 +2,11 @@
 .DS_Store
 Thumbs.db
 
+# Archive snapshots
+archive/
+api/archive/
+js/archive/
+
 # Secrets / credentials
 .env
 *.env
