@@ -103,32 +103,23 @@ switch ($method) {
         // ── Open new order for a table ────────────────────
         if ($action === 'open') {
             $table_id = intval($input['table_id'] ?? 0);
-            $guest_count = intval($input['guest_count'] ?? 1);
-
             if (!$table_id) err('table_id requerido');
-            if ($guest_count < 1) $guest_count = 1;
-            if ($guest_count > 30) $guest_count = 30;
 
             // Check no open order exists
             $existing = db_fetch_one($conn,
-                "SELECT id, guest_count FROM orders WHERE pos_table_id = ? AND status = 'open'",
+                "SELECT id FROM orders WHERE pos_table_id = ? AND status = 'open'",
                 'i', [$table_id]
             );
             if ($existing) {
-                respond([
-                    'success' => true,
-                    'order_id' => $existing['id'],
-                    'guest_count' => intval($existing['guest_count'] ?? 1),
-                    'existing' => true
-                ]);
+                respond(['success' => true, 'order_id' => $existing['id'], 'existing' => true]);
             }
 
             $order_id = db_insert($conn,
-                "INSERT INTO orders (pos_table_id, created_by, guest_count, status) VALUES (?, ?, ?, 'open')",
-                'iii',
-                [$table_id, $input['user_id'] ?? null, $guest_count]
+                "INSERT INTO orders (pos_table_id, created_by, status) VALUES (?, ?, 'open')",
+                'ii',
+                [$table_id, $input['user_id'] ?? null]
             );
-            $order_id ? respond(['success' => true, 'order_id' => $order_id, 'guest_count' => $guest_count]) : err('Error al abrir orden');
+            $order_id ? respond(['success' => true, 'order_id' => $order_id]) : err('Error al abrir orden');
 
         // ── Add item to order ─────────────────────────────
         } elseif ($action === 'add_item') {

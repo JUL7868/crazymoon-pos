@@ -8,8 +8,6 @@ window.menuItems = [];
 
 window.pendingItem = null;
 window.pendingTapItem = null;
-window.pendingGuestTableId = null;
-window.pendingGuestCount = 1;
 
 window.API = {
   orders: '/api/orders.php',

@@ -132,11 +132,6 @@
     .modal-cancel { width: 100%; padding: 8px; border-radius: var(--radius); border: 1px solid var(--border-m); background: transparent; cursor: pointer; font-size: 13px; font-family: var(--font-b); color: var(--text-mid); }
     .modal-cancel:hover { background: var(--hover); }
 
-    .guest-count-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 16px; }
-    .guest-count-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-m); background: var(--panel); color: var(--text-hi); cursor: pointer; font-size: 22px; font-family: var(--font-h); transition: all 0.12s; }
-    .guest-count-btn:hover { border-color: var(--orange); color: var(--orange); }
-    .guest-count-value { min-width: 54px; text-align: center; font-size: 30px; font-family: var(--font-h); color: var(--orange); }
-
     .size-modal-btns { display: flex; gap: 8px; }
     .size-btn-sm { flex: 1; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border-m); background: var(--panel); cursor: pointer; font-family: var(--font-h); font-size: 13px; color: var(--text-mid); transition: all 0.12s; letter-spacing: 0.03em; }
     .size-btn-sm:hover { border-color: var(--orange); color: var(--orange); }
@@ -296,22 +291,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="guest-modal" style="display:none;">
-  <div class="modal">
-    <h2 id="guest-table-name">Mesa</h2>
-    <p style="font-size:12px;color:var(--text-mid);margin-bottom:12px;">¿Cuántos invitados?</p>
-    <div class="guest-count-row">
-      <button class="guest-count-btn" onclick="adjustGuestCount(-1)">−</button>
-      <div class="guest-count-value" id="guest-count-value">1</div>
-      <button class="guest-count-btn" onclick="adjustGuestCount(1)">+</button>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="size-btn-sm" onclick="closeModal()">Cancelar</button>
-      <button class="size-btn-lg" onclick="confirmGuestCount()">Abrir mesa</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="size-modal" style="display:none;">
   <div class="modal">
     <h2 id="size-modal-name"></h2>
@@ -394,7 +373,6 @@ async function loadOrderForTable(table_id, order_id) {
         order_id: data.order.id,
         items: items,
         total: parseFloat(data.order.total || 0),
-        guest_count: parseInt(data.order.guest_count || 1, 10) || 1,
       };
     }
   } catch(e) {}

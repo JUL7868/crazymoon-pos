@@ -63,77 +63,42 @@ window.selectTableFromModal = async function selectTableFromModal(table_id) {
   closeModal();
 
   if (!activeTabs[table_id]) {
-    openGuestCountModal(table_id);
-    return;
-  }
+    showSpinner(true);
 
-  selectTable(table_id);
-};
+    try {
+      const res = await fetch(API.orders, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'open', table_id, user_id: userId }),
+      });
 
-window.openGuestCountModal = function openGuestCountModal(table_id) {
-  const table = tables.find(t => t.id === table_id);
+      const data = await res.json();
 
-  pendingGuestTableId = table_id;
-  pendingGuestCount = 1;
+      if (!data.success) {
+        console.error('OPEN ORDER FAILED:', data);
+        toast('Error: ' + (data.error || 'no se pudo abrir'));
+        showSpinner(false);
+        return;
+      }
 
-  document.getElementById('guest-table-name').textContent = table ? table.name : 'Mesa';
-  document.getElementById('guest-count-value').textContent = pendingGuestCount;
-  document.getElementById('guest-modal').style.display = 'flex';
-};
+      activeTabs[table_id] = {
+        order_id: data.order_id,
+        items: [],
+        total: 0
+      };
 
-window.adjustGuestCount = function adjustGuestCount(delta) {
-  pendingGuestCount = Math.max(1, Math.min(30, pendingGuestCount + delta));
-  document.getElementById('guest-count-value').textContent = pendingGuestCount;
-};
+      await loadTables();
 
-window.confirmGuestCount = async function confirmGuestCount() {
-  const table_id = pendingGuestTableId;
-  const guest_count = pendingGuestCount || 1;
-
-  if (!table_id) {
-    closeModal();
-    return;
-  }
-
-  document.getElementById('guest-modal').style.display = 'none';
-  showSpinner(true);
-
-  try {
-    const res = await fetch(API.orders, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'open', table_id, guest_count, user_id: userId }),
-    });
-
-    const data = await res.json();
-
-    if (!data.success) {
-      console.error('OPEN ORDER FAILED:', data);
-      toast('Error: ' + (data.error || 'no se pudo abrir'));
+    } catch (e) {
+      console.error('OPEN ORDER ERROR:', e);
+      toast('Error abriendo orden');
       showSpinner(false);
       return;
     }
 
-    activeTabs[table_id] = {
-      order_id: data.order_id,
-      items: [],
-      total: 0,
-      guest_count: parseInt(data.guest_count || guest_count, 10) || 1
-    };
-
-    pendingGuestTableId = null;
-    pendingGuestCount = 1;
-
-    await loadTables();
-
-  } catch (e) {
-    console.error('OPEN ORDER ERROR:', e);
-    toast('Error abriendo orden');
     showSpinner(false);
-    return;
   }
 
-  showSpinner(false);
   selectTable(table_id);
 };
 
@@ -215,12 +180,9 @@ window.renderOrder = function renderOrder() {
 
   titleEl.textContent = table ? table.name.toUpperCase() : '';
 
-  const guestCount = parseInt(tab.guest_count || 1, 10) || 1;
-  const itemCount = tab.items.reduce((s, i) => s + i.qty, 0);
-
   subEl.textContent = tab.items.length
-    ? guestCount + ' invitado(s) · ' + itemCount + ' articulo(s)'
-    : guestCount + ' invitado(s) · Mesa vacia';
+    ? tab.items.reduce((s, i) => s + i.qty, 0) + ' articulo(s)'
+    : 'Mesa vacia';
 
   if (!tab.items.length) {
     itemsEl.innerHTML = '<div class="order-empty">Agrega articulos del menu</div>';
@@ -341,14 +303,11 @@ window.clearOrder = async function clearOrder() {
 
 window.closeModal = function closeModal() {
   document.getElementById('table-modal').style.display = 'none';
-  document.getElementById('guest-modal').style.display = 'none';
   document.getElementById('size-modal').style.display = 'none';
   document.getElementById('note-modal').style.display = 'none';
 
   pendingTapItem = null;
   pendingItem = null;
-  pendingGuestTableId = null;
-  pendingGuestCount = 1;
 };
 
 window.showSpinner = function showSpinner(show) {
@@ -380,13 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const tableModal = document.getElementById('table-modal');
   if (tableModal) {
     tableModal.addEventListener('click', function(e) {
-      if (e.target === this) closeModal();
-    });
-  }
-
-  const guestModal = document.getElementById('guest-modal');
-  if (guestModal) {
-    guestModal.addEventListener('click', function(e) {
       if (e.target === this) closeModal();
     });
   }

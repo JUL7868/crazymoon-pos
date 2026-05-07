@@ -27,6 +27,7 @@ window.removeItem = async function removeItem(item_id) {
   showSpinner(false);
 };
 
+
 window.updateQty = async function updateQty(item_id, order_id, qty) {
   showSpinner(true);
 
@@ -60,6 +61,7 @@ window.updateQty = async function updateQty(item_id, order_id, qty) {
 
   showSpinner(false);
 };
+
 
 window.pushItem = async function pushItem(menu_item_id, name, category, size, unit_price, notes = '') {
   const tab = activeTabs[activeTableId];
@@ -109,6 +111,16 @@ window.pushItem = async function pushItem(menu_item_id, name, category, size, un
 
       tab.total = data.total;
       renderOrder();
+
+      // 🔥 kitchen ticket
+      if (data.item_id) {
+        await printKitchenTicket({
+          table: activeTableId,
+          item: name + (size ? ' ' + size : ''),
+          qty: 1,
+          notes: notes
+        });
+      }
     }
 
   } catch (e) {
@@ -117,6 +129,7 @@ window.pushItem = async function pushItem(menu_item_id, name, category, size, un
 
   showSpinner(false);
 };
+
 
 window.addItem = function addItem(id) {
   if (!activeTableId) {
@@ -147,4 +160,3 @@ window.processItemWithNote = function processItemWithNote(m, notes) {
 
   pushItem(m.id, m.name, m.category, '', parseFloat(m.price), notes);
 };
-

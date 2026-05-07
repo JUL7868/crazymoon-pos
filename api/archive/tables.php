@@ -40,8 +40,7 @@ switch ($method) {
                 o.id as order_id,
                 o.total as order_total,
                 o.status as order_status,
-                o.created_at as order_opened_at,
-                o.guest_count as guest_count
+                o.created_at as order_opened_at
              FROM pos_tables t
              LEFT JOIN orders o ON o.pos_table_id = t.id AND o.status = 'open'
              WHERE t.active = 1
