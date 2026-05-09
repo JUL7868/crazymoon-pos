@@ -2,44 +2,6 @@
 // FILE: /js/printing.js
 // ========================================
 
-// =========================
-// QZ SIGNING
-// =========================
-
-qz.security.setCertificatePromise(function(resolve, reject) {
-
-    fetch('/crazymoon_pos/api/qz-certificate.php')
-        .then(res => res.text())
-        .then(resolve)
-        .catch(reject);
-
-});
-
-
-qz.security.setSignaturePromise(function(toSign) {
-
-    return function(resolve, reject) {
-
-        fetch('/crazymoon_pos/api/qz-sign.php', {
-
-            method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify({
-                request: toSign
-            })
-
-        })
-        .then(res => res.text())
-        .then(resolve)
-        .catch(reject);
-
-    };
-
-});
 
 // =========================
 // SAFE CONNECTION HANDLER
@@ -53,6 +15,45 @@ window.qzConnectSafe = async function qzConnectSafe() {
 
         return false;
     }
+
+    // =========================
+    // QZ SIGNING
+    // =========================
+
+    qz.security.setCertificatePromise(function(resolve, reject) {
+
+        fetch('/crazymoon_pos/api/qz-certificate.php')
+            .then(res => res.text())
+            .then(resolve)
+            .catch(reject);
+
+    });
+
+
+    qz.security.setSignaturePromise(function(toSign) {
+
+        return function(resolve, reject) {
+
+            fetch('/crazymoon_pos/api/qz-sign.php', {
+
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify({
+                    request: toSign
+                })
+
+            })
+            .then(res => res.text())
+            .then(resolve)
+            .catch(reject);
+
+        };
+
+    });
 
     if (!qz.websocket.isActive()) {
 
@@ -116,8 +117,6 @@ function qzFormatMoney(value) {
 
     return `$${num.toFixed(2)}`;
 }
-
-
 // =========================
 // SAFE BUZZER HELPER
 // =========================
