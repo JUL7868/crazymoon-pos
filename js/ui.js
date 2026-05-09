@@ -22,7 +22,9 @@ window.renderMenu = function renderMenu() {
 
   const items = menuItems.filter(m => m.category === selCat && m.active == 1);
   document.getElementById('menu-grid').innerHTML = items.map(m => {
-    const pl = m.price_300 ? `$${m.price_300} / $${m.price_500}` : fmt(m.price);
+    const pl = m.price_300
+      ? `${fmt(m.price_300)} / ${fmt(m.price_500)}`
+      : fmt(m.price);
 
     return `<div class="menu-item" onclick="addItem(${m.id})">
       <span class="item-badge ${m.badge}">${m.label}</span>

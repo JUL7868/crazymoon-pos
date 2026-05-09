@@ -151,8 +151,8 @@ window.processItemWithNote = function processItemWithNote(m, notes) {
     pendingTapItem = { ...m, notes };
 
     document.getElementById('size-modal-name').textContent = m.name;
-    document.getElementById('size-300-btn').textContent = `300ml — $${m.price_300}`;
-    document.getElementById('size-500-btn').textContent = `500ml — $${m.price_500}`;
+    document.getElementById('size-300-btn').textContent = `300ml — ${fmt(m.price_300)}`;
+    document.getElementById('size-500-btn').textContent = `500ml — ${fmt(m.price_500)}`;
     document.getElementById('size-modal').style.display = 'flex';
 
     return;

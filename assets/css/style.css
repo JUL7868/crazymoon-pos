@@ -1,448 +1,3 @@
-```html
-<!-- FILE: crazymoon-pos.html -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-  <title>Crazy Moon POS</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="assets/css/style.css">
-</head>
-
-<body>
-
-<div class="pos">
-
-  <div class="left">
-
-    <div class="topbar">
-      <div class="logo">CRAZY <span>MOON</span></div>
-
-      <div id="tab-list" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-
-      <button class="new-tab-btn" onclick="openTableModal()">+ Mesa</button>
-    </div>
-
-    <div class="cat-bar" id="cat-bar"></div>
-
-    <div class="sampler-note">
-      Sampler 4 estilos · <span>$160 · 150ml c/u</span>
-    </div>
-
-    <div class="menu-grid" id="menu-grid"></div>
-
-  </div>
-
-  <div class="right">
-
-    <div class="order-header">
-      <div class="order-title" id="order-title"></div>
-      <div class="order-sub" id="order-sub"></div>
-    </div>
-
-    <div class="order-items" id="order-items">
-      <div class="order-empty">Selecciona una mesa</div>
-    </div>
-
-    <div class="totals" id="totals" style="display:none;">
-      <div class="totals-row grand">
-        <span>TOTAL</span>
-        <span id="t-total">$0</span>
-      </div>
-    </div>
-
-    <div class="pay-section" id="pay-section" style="display:none;">
-
-      <div class="pay-method">
-        <button id="pay-cash" onclick="selectPay('cash')">Efectivo</button>
-        <button id="pay-card" onclick="selectPay('card')">Tarjeta</button>
-        <button id="pay-split" onclick="selectPay('split')">Mixto</button>
-      </div>
-
-      <div id="cash-input-row" class="cash-row" style="display:none;">
-        <label>Recibido $</label>
-
-        <input
-          type="number"
-          id="cash-tendered"
-          placeholder="0"
-          oninput="calcChange()"
-          step="1"
-          min="0">
-
-        <span class="change-display" id="change-display"></span>
-      </div>
-
-      <button
-        class="charge-btn"
-        id="charge-btn"
-        onclick="chargeOrder()"
-        disabled>
-        Cobrar
-      </button>
-
-      <button class="clear-btn" onclick="clearOrder()">
-        Limpiar orden
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- TABLE MODAL -->
-
-<div class="modal-overlay" id="table-modal" style="display:none;">
-
-  <div class="modal">
-
-    <button class="modal-x" onclick="closeModal()">×</button>
-
-    <h2>Selecciona una mesa</h2>
-
-    <div class="table-grid" id="table-grid"></div>
-
-    <button class="modal-cancel" onclick="closeModal()">
-      Cancelar
-    </button>
-
-  </div>
-
-</div>
-
-<!-- GUEST MODAL -->
-
-<div class="modal-overlay" id="guest-modal" style="display:none;">
-
-  <div class="modal">
-
-    <button class="modal-x" onclick="closeModal()">×</button>
-
-    <h2 id="guest-table-name">Mesa</h2>
-
-    <p class="modal-subtitle">
-      ¿Cuántos invitados?
-    </p>
-
-    <div class="guest-count-row">
-
-      <button
-        class="guest-count-btn"
-        onclick="adjustGuestCount(-1)">
-        −
-      </button>
-
-      <div class="guest-count-value" id="guest-count-value">
-        1
-      </div>
-
-      <button
-        class="guest-count-btn"
-        onclick="adjustGuestCount(1)">
-        +
-      </button>
-
-    </div>
-
-    <div class="modal-actions">
-
-      <button
-        class="size-btn-sm"
-        onclick="closeModal()">
-        Cancelar
-      </button>
-
-      <button
-        class="size-btn-lg"
-        onclick="confirmGuestCount()">
-        Abrir mesa
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- SIZE MODAL -->
-
-<div class="modal-overlay" id="size-modal" style="display:none;">
-
-  <div class="modal">
-
-    <button class="modal-x" onclick="closeModal()">×</button>
-
-    <h2 id="size-modal-name"></h2>
-
-    <p class="modal-subtitle">
-      Selecciona el tamaño
-    </p>
-
-    <div class="size-modal-btns">
-
-      <button
-        class="size-btn-sm"
-        id="size-300-btn"
-        onclick="confirmSize(300)">
-      </button>
-
-      <button
-        class="size-btn-lg"
-        id="size-500-btn"
-        onclick="confirmSize(500)">
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- NOTE MODAL -->
-
-<div class="modal-overlay" id="note-modal" style="display:none;">
-
-  <div class="modal">
-
-    <button class="modal-x" onclick="closeModal()">×</button>
-
-    <h2>Modificar</h2>
-
-    <textarea
-      id="note-input"
-      class="note-input"
-      placeholder="Ej: sin mayonesa, término medio...">
-    </textarea>
-
-    <div class="modal-actions">
-
-      <button
-        class="size-btn-sm"
-        onclick="cancelNote()">
-        Sin modificación
-      </button>
-
-      <button
-        class="size-btn-lg"
-        onclick="confirmNote()">
-        Agregar
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<div class="toast" id="toast"></div>
-
-<div class="spinner-overlay" id="spinner">
-  <div class="spinner"></div>
-</div>
-
-<script>
-
-const BASE = 'https://crazymoon.space/crazymoon_pos/api';
-
-const API = {
-  menu:   BASE + '/menu.php',
-  tables: BASE + '/tables.php',
-  orders: BASE + '/orders.php',
-  auth:   BASE + '/auth.php',
-};
-
-const CATS = [
-  'Tap Pintas',
-  'Latas',
-  'Pizzas',
-  'Burgers',
-  'Botanas',
-  'Postres',
-  'Bebidas'
-];
-
-const fmt = n => '$' + Math.round(n).toLocaleString();
-
-async function init() {
-  await Promise.all([
-    loadMenu(),
-    loadTables()
-  ]);
-
-  renderCats();
-  renderMenu();
-  renderTabs();
-}
-
-async function loadMenu() {
-
-  try {
-
-    const res = await fetch(API.menu);
-    const data = await res.json();
-
-    menuItems = data.items || [];
-
-  } catch(e) {
-
-    toast('Error cargando menu');
-
-  }
-
-}
-
-async function loadTables() {
-
-  try {
-
-    const res = await fetch(API.tables);
-    const data = await res.json();
-
-    tables = data.tables || [];
-
-    for (const t of tables) {
-
-      if (t.order_id) {
-
-        await loadOrderForTable(
-          t.id,
-          t.order_id
-        );
-
-      }
-
-    }
-
-  } catch(e) {
-
-    toast('Error cargando mesas');
-
-  }
-
-}
-
-async function loadOrderForTable(table_id, order_id) {
-
-  try {
-
-    const res = await fetch(
-      `${API.orders}?action=get_order&table_id=${table_id}`
-    );
-
-    const data = await res.json();
-
-    if (data.order) {
-
-      const items = data.items || [];
-
-      items.forEach(i => {
-
-        i.notes = i.notes || '';
-
-        i._key =
-          `${i.menu_item_id || i.item_name}-${i.size || ''}-${i.notes || ''}`;
-
-      });
-
-      activeTabs[table_id] = {
-
-        order_id: data.order.id,
-
-        items: items,
-
-        total: parseFloat(data.order.total || 0),
-
-        guest_count:
-          parseInt(data.order.guest_count || 1, 10) || 1,
-
-      };
-
-    }
-
-  } catch(e) {}
-
-}
-
-init();
-
-</script>
-
-<!-- ========================= -->
-<!-- QZ TRAY -->
-<!-- ========================= -->
-
-<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.js"></script>
-
-<script>
-
-qz.security.setCertificatePromise(function(resolve, reject) {
-  resolve();
-});
-
-qz.security.setSignaturePromise(function(toSign) {
-  return function(resolve, reject) {
-    resolve();
-  };
-});
-
-async function qzConnectSafe() {
-
-  if (!qz.websocket.isActive()) {
-
-    try {
-
-      await qz.websocket.connect();
-
-      console.log("QZ Connected");
-
-    } catch (err) {
-
-      console.error("QZ Connection failed:", err);
-
-    }
-
-  }
-
-}
-
-async function qzListPrinters() {
-
-  await qzConnectSafe();
-
-  try {
-
-    const printers = await qz.printers.find();
-
-    console.log("PRINTERS:", printers);
-
-    return printers;
-
-  } catch (err) {
-
-    console.error("Printer lookup failed:", err);
-
-  }
-
-}
-
-</script>
-
-<script src="js/state.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/orders.js"></script>
-<script src="js/printing.js"></script>
-<script src="js/payments.js"></script>
-
-</body>
-</html>
-```
-
-```css
 /* FILE: /assets/css/style.css */
 
 *, *::before, *::after {
@@ -1030,4 +585,220 @@ body {
     width: calc(100% - 28px);
   }
 }
-```
+
+/* ========================================
+   ORDER PANEL RECOVERY
+======================================== */
+
+.order-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto auto;
+  gap: 8px;
+  align-items: center;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.order-row-name {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-hi);
+}
+
+.order-row-name span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-mid);
+  margin-top: 2px;
+}
+
+.order-note {
+  color: var(--orange) !important;
+}
+
+.order-row-price {
+  min-width: 54px;
+  text-align: right;
+
+  font-family: var(--font-h);
+  font-size: 15px;
+
+  color: var(--orange);
+}
+
+.qty-btn {
+  width: 28px;
+  height: 28px;
+
+  border-radius: 6px;
+  border: 1px solid var(--border-m);
+
+  background: var(--panel);
+  color: var(--text-hi);
+
+  cursor: pointer;
+
+  font-size: 16px;
+  line-height: 1;
+
+  transition: all 0.12s;
+}
+
+.qty-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.qty-num {
+  min-width: 20px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.remove-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;  
+  justify-content: center;
+
+  border-radius: 6px;
+  border: 1px solid rgba(212,74,74,0.3);
+
+  background: transparent;
+  color: var(--red);
+
+  cursor: pointer;
+
+  transition: all 0.12s;
+}
+
+.remove-btn:hover {
+  background: rgba(212,74,74,0.1);
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 4px 0;
+
+  font-size: 13px;
+}
+
+.totals-row.grand {
+  font-size: 16px;
+  font-family: var(--font-h);
+  color: var(--orange);
+}
+
+.pay-method {
+  display: flex;
+  gap: 6px;
+}
+
+.pay-method button {
+  flex: 1;
+
+  height: 36px;
+
+  border-radius: var(--radius);
+  border: 1px solid var(--border-m);
+
+  background: transparent;
+  color: var(--text-mid);
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  transition: all 0.12s;
+}
+
+.pay-method button:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.pay-method button.sel {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: white;
+}
+
+.cash-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 13px;
+}
+
+.cash-row input {
+  flex: 1;
+
+  height: 36px;
+
+  background: var(--panel);
+  border: 1px solid var(--border-m);
+  border-radius: var(--radius);
+
+  color: var(--text-hi);
+
+  padding: 0 10px;
+}
+
+.change-display {
+  font-size: 12px;
+  color: var(--orange);
+}
+
+.charge-btn {
+  width: 100%;
+  height: 42px;
+
+  border: none;
+  border-radius: var(--radius);
+
+  background: var(--orange);
+  color: white;
+
+  cursor: pointer;
+
+  font-family: var(--font-h);
+  font-size: 15px;
+
+  transition: all 0.12s;
+}
+
+.charge-btn:hover:not(:disabled) {
+  background: var(--orange-d);
+}
+
+.charge-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.clear-btn {
+  width: 100%;
+  height: 36px;
+
+  border-radius: var(--radius);
+  border: 1px solid var(--border-m);
+
+  background: transparent;
+  color: var(--text-mid);
+
+  cursor: pointer;
+
+  transition: all 0.12s;
+}
+
+.clear-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
