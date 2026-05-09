@@ -20,6 +20,8 @@ window.qzConnectSafe = async function qzConnectSafe() {
     // QZ SIGNING
     // =========================
 
+    qz.security.setSignatureAlgorithm("SHA512");
+
     qz.security.setCertificatePromise(function(resolve, reject) {
 
         fetch('/crazymoon_pos/api/qz-certificate.php')
@@ -117,6 +119,8 @@ function qzFormatMoney(value) {
 
     return `$${num.toFixed(2)}`;
 }
+
+
 // =========================
 // SAFE BUZZER HELPER
 // =========================
