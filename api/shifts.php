@@ -187,6 +187,18 @@ switch ($method) {
                 'payment_total' => floatval($payment_totals['payment_total'] ?? 0),
             ];
 
+            $gross_food_drink_sales = floatval($data['sales']['total_sales'] ?? 0);
+            $iva_rate = 0.16;
+            $net_food_drink_sales = $gross_food_drink_sales / 1.16;
+            $iva_total = $gross_food_drink_sales - $net_food_drink_sales;
+
+            $data['tax_totals'] = [
+                'gross_food_drink_sales' => round($gross_food_drink_sales, 2),
+                'net_food_drink_sales'   => round($net_food_drink_sales, 2),
+                'iva_total'              => round($iva_total, 2),
+                'iva_rate'               => $iva_rate,
+            ];
+
             $total_sales    = floatval($data['sales']['total_sales']  ?? 0);
             $total_cash     = floatval($data['sales']['total_cash']   ?? 0);
             $total_card     = floatval($data['sales']['total_card']   ?? 0);
