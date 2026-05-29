@@ -170,77 +170,152 @@ switch ($method) {
 
         // ── Close shift — Z Report ────────────────────────
         } elseif ($action === 'close') {
-            $shift_id = intval($input['shift_id'] ?? 0);
-            $user_id  = intval($input['user_id']  ?? 0);
-            if (!$shift_id) err('shift_id requerido');
+            try {
+                $shift_id = intval($input['shift_id'] ?? 0);
+                $user_id  = intval($input['user_id']  ?? 0);
+                if (!$shift_id) err('shift_id requerido');
 
-            $shift = db_fetch_one($conn, "SELECT * FROM shifts WHERE id = ? AND status = 'open'", 'i', [$shift_id]);
-            if (!$shift) err('Turno no encontrado o ya cerrado');
+                $run_rows = function($sql) use ($conn) {
+                    $result = mysqli_query($conn, $sql);
 
-            // Check no open orders remain
-            $open_orders = db_fetch_one($conn,
-                "SELECT COUNT(*) as cnt FROM orders WHERE shift_id = ? AND status = 'open'",
-                'i', [$shift_id]
-            );
-            if (intval($open_orders['cnt']) > 0) {
-                err('Hay ordenes abiertas. Cierralas antes de cerrar el turno.');
-            }
+                    if (!$result) {
+                        respond([
+                            'success' => false,
+                            'error'   => 'No se pudo generar el Corte Z',
+                        ], 500);
+                    }
 
-            // Build final report data
-            $data = buildShiftData($conn, $shift_id);
+                    $rows = [];
 
-            $payment_totals = db_fetch_one($conn,
-                "SELECT
-                    COALESCE(SUM(tip_cash), 0) as tip_cash,
-                    COALESCE(SUM(tip_card), 0) as tip_card,
-                    COALESCE(SUM(tip_total), 0) as tip_total,
-                    COALESCE(SUM(payment_total), 0) as payment_total
-                 FROM orders
-                 WHERE shift_id = ? AND status = 'paid'",
-                'i', [$shift_id]
-            );
+                    while ($row = mysqli_fetch_assoc($result)) {
+                        $rows[] = $row;
+                    }
 
-            $data['payment_totals'] = [
-                'tip_cash'      => floatval($payment_totals['tip_cash'] ?? 0),
-                'tip_card'      => floatval($payment_totals['tip_card'] ?? 0),
-                'tip_total'     => floatval($payment_totals['tip_total'] ?? 0),
-                'payment_total' => floatval($payment_totals['payment_total'] ?? 0),
-            ];
+                    return $rows;
+                };
 
-            $gross_food_drink_sales = floatval($data['sales']['total_sales'] ?? 0);
-            $iva_rate = 0.16;
-            $net_food_drink_sales = $gross_food_drink_sales / 1.16;
-            $iva_total = $gross_food_drink_sales - $net_food_drink_sales;
+                $shift_rows = $run_rows(
+                    "SELECT * FROM shifts WHERE id = {$shift_id} AND status = 'open'"
+                );
+                $shift = $shift_rows[0] ?? null;
+                if (!$shift) err('Turno no encontrado o ya cerrado');
 
-            $data['tax_totals'] = [
-                'gross_food_drink_sales' => round($gross_food_drink_sales, 2),
-                'net_food_drink_sales'   => round($net_food_drink_sales, 2),
-                'iva_total'              => round($iva_total, 2),
-                'iva_rate'               => $iva_rate,
-            ];
+                $open_order_rows = $run_rows(
+                    "SELECT COUNT(*) as cnt FROM orders WHERE shift_id = {$shift_id} AND status = 'open'"
+                );
+                if (intval($open_order_rows[0]['cnt'] ?? 0) > 0) {
+                    err('Hay ordenes abiertas. Cierralas antes de cerrar el turno.');
+                }
 
-            $total_sales    = floatval($data['sales']['total_sales']  ?? 0);
-            $total_cash     = floatval($data['sales']['total_cash']   ?? 0);
-            $total_card     = floatval($data['sales']['total_card']   ?? 0);
-            $total_split    = floatval($data['sales']['total_split']  ?? 0);
-            $total_expenses = floatval($data['total_expenses']        ?? 0);
-            $net_cash       = $total_cash - $total_expenses;
+                $sales_rows = $run_rows(
+                    "SELECT
+                        COUNT(*) as order_count,
+                        COALESCE(SUM(total), 0) as total_sales,
+                        COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN total ELSE 0 END), 0) as total_cash,
+                        COALESCE(SUM(CASE WHEN payment_method = 'card' THEN total ELSE 0 END), 0) as total_card,
+                        COALESCE(SUM(CASE WHEN payment_method = 'split' THEN total ELSE 0 END), 0) as total_split
+                     FROM orders
+                     WHERE shift_id = {$shift_id} AND status = 'paid'"
+                );
+                $sales = $sales_rows[0] ?? [];
 
-            db_update($conn,
-                "UPDATE shifts SET 
-                    status = 'closed',
-                    closed_by = ?,
-                    closed_at = NOW(),
-                    total_sales = ?,
-                    total_cash = ?,
-                    total_card = ?,
-                    total_split = ?,
-                    total_expenses = ?,
-                    net_cash = ?,
-                    z_report_data = ?
-                 WHERE id = ?",
-                'iddddddsi',
-                [
+                $by_category = $run_rows(
+                    "SELECT oi.category, SUM(oi.subtotal) as total, SUM(oi.qty) as qty
+                     FROM order_items oi
+                     JOIN orders o ON o.id = oi.order_id
+                     WHERE o.shift_id = {$shift_id} AND o.status = 'paid'
+                     GROUP BY oi.category ORDER BY total DESC"
+                );
+
+                $expenses = $run_rows(
+                    "SELECT type, SUM(amount) as total
+                     FROM expenses
+                     WHERE shift_id = {$shift_id}
+                     GROUP BY type"
+                );
+
+                $by_staff = $run_rows(
+                    "SELECT o.paid_by, COUNT(o.id) as orders, COALESCE(SUM(o.total), 0) as total
+                     FROM orders o
+                     WHERE o.shift_id = {$shift_id} AND o.status = 'paid'
+                     GROUP BY o.paid_by"
+                );
+
+                $payment_total_rows = $run_rows(
+                    "SELECT
+                        COALESCE(SUM(tip_cash), 0) as tip_cash,
+                        COALESCE(SUM(tip_card), 0) as tip_card,
+                        COALESCE(SUM(tip_total), 0) as tip_total,
+                        COALESCE(SUM(payment_total), 0) as payment_total
+                     FROM orders
+                     WHERE shift_id = {$shift_id} AND status = 'paid'"
+                );
+                $payment_totals = $payment_total_rows[0] ?? [];
+
+                $total_expenses = array_sum(array_map(function($row) {
+                    return floatval($row['total'] ?? 0);
+                }, $expenses));
+
+                $total_sales = floatval($sales['total_sales'] ?? 0);
+                $total_cash = floatval($sales['total_cash'] ?? 0);
+                $total_card = floatval($sales['total_card'] ?? 0);
+                $total_split = floatval($sales['total_split'] ?? 0);
+                $net_cash = $total_cash - $total_expenses;
+
+                $gross_food_drink_sales = $total_sales;
+                $iva_rate = 0.16;
+                $net_food_drink_sales = $gross_food_drink_sales / 1.16;
+                $iva_total = $gross_food_drink_sales - $net_food_drink_sales;
+
+                $data = [
+                    'shift'          => $shift,
+                    'sales'          => $sales,
+                    'by_category'    => $by_category,
+                    'by_staff'       => $by_staff,
+                    'expenses'       => $expenses,
+                    'total_expenses' => $total_expenses,
+                    'net_cash'       => $net_cash,
+                    'payment_totals' => [
+                        'tip_cash'      => floatval($payment_totals['tip_cash'] ?? 0),
+                        'tip_card'      => floatval($payment_totals['tip_card'] ?? 0),
+                        'tip_total'     => floatval($payment_totals['tip_total'] ?? 0),
+                        'payment_total' => floatval($payment_totals['payment_total'] ?? 0),
+                    ],
+                    'tax_totals'     => [
+                        'gross_food_drink_sales' => round($gross_food_drink_sales, 2),
+                        'net_food_drink_sales'   => round($net_food_drink_sales, 2),
+                        'iva_total'              => round($iva_total, 2),
+                        'iva_rate'               => $iva_rate,
+                    ],
+                ];
+
+                $z_report_data = json_encode($data);
+
+                $stmt = mysqli_prepare($conn,
+                    "UPDATE shifts SET
+                        status = 'closed',
+                        closed_by = ?,
+                        closed_at = NOW(),
+                        total_sales = ?,
+                        total_cash = ?,
+                        total_card = ?,
+                        total_split = ?,
+                        total_expenses = ?,
+                        net_cash = ?,
+                        z_report_data = ?
+                     WHERE id = ?"
+                );
+
+                if (!$stmt) {
+                    respond([
+                        'success' => false,
+                        'error'   => 'No se pudo cerrar el turno',
+                    ], 500);
+                }
+
+                mysqli_stmt_bind_param(
+                    $stmt,
+                    'iddddddsi',
                     $user_id,
                     $total_sales,
                     $total_cash,
@@ -248,16 +323,31 @@ switch ($method) {
                     $total_split,
                     $total_expenses,
                     $net_cash,
-                    json_encode($data),
-                    $shift_id,
-                ]
-            );
+                    $z_report_data,
+                    $shift_id
+                );
 
-            respond([
-                'success' => true,
-                'report'  => $data,
-                'type'    => 'z',
-            ]);
+                if (!mysqli_stmt_execute($stmt)) {
+                    mysqli_stmt_close($stmt);
+                    respond([
+                        'success' => false,
+                        'error'   => 'No se pudo cerrar el turno',
+                    ], 500);
+                }
+
+                mysqli_stmt_close($stmt);
+
+                respond([
+                    'success' => true,
+                    'report'  => $data,
+                    'type'    => 'z',
+                ]);
+            } catch (Throwable $e) {
+                respond([
+                    'success' => false,
+                    'error'   => 'No se pudo cerrar el turno',
+                ], 500);
+            }
         }
         break;
 
