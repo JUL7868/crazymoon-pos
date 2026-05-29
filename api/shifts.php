@@ -91,14 +91,34 @@ switch ($method) {
     case 'GET':
         // ── Get current open shift ────────────────────────
         if ($action === 'current') {
-            $shift = db_fetch_one($conn,
-                "SELECT s.*, u.name as opened_by_name 
-                 FROM shifts s 
-                 LEFT JOIN users u ON u.id = s.opened_by
-                 WHERE s.status = 'open' 
-                 ORDER BY s.opened_at DESC LIMIT 1"
-            );
-            respond(['success' => true, 'shift' => $shift]);
+            try {
+                $sql = "SELECT *
+                        FROM shifts
+                        WHERE status = 'open'
+                        ORDER BY opened_at DESC LIMIT 1";
+
+                $result = mysqli_query($conn, $sql);
+
+                if (!$result) {
+                    respond([
+                        'success' => false,
+                        'error'   => 'No se pudo consultar el turno actual',
+                    ], 500);
+                }
+
+                $shift = mysqli_fetch_assoc($result) ?: null;
+
+                respond([
+                    'success' => true,
+                    'shift'   => $shift,
+                ]);
+
+            } catch (Throwable $e) {
+                respond([
+                    'success' => false,
+                    'error'   => 'No se pudo consultar el turno actual',
+                ], 500);
+            }
 
         // ── X Report — live snapshot ──────────────────────
         } elseif ($action === 'x_report') {
