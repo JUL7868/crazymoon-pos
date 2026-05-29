@@ -29,27 +29,16 @@ window.chargeOrder = async function chargeOrder() {
       // 🔥 PRINT CAJERO TICKET
       // =========================
       try {
-        await qzConnectSafe();
-
-        const printer = await qz.printers.find("Cajero");
-        const config = qz.configs.create(printer, { encoding: 'CP437' });
-
-        const ticket = [
-          '\x1B\x40',
-          '\x1B\x61\x01',
-          '*** CRAZY MOON ***\n',
-          '\x1B\x61\x00',
-          `Mesa: ${activeTableId}\n`,
-          `Total: $${data.total}\n`,
-          `Pago: ${payMethod}\n`,
-          '\nGracias!\n\n\n'
-        ];
-
-        await qz.print(config, [{
-          type: 'raw',
-          format: 'command',
-          data: ticket
-        }]);
+        await printCajeroTicket({
+          items: tab.items.map(item => ({
+            qty: item.qty,
+            name: item.item_name,
+            line_total: item.subtotal ?? (item.unit_price * item.qty)
+          })),
+          total: data.total,
+          table: activeTableId,
+          payment_method: payMethod
+        }, activeTableId, payMethod);
 
       } catch (err) {
         console.error("PRINT ERROR:", err);
