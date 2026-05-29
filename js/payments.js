@@ -30,14 +30,19 @@ window.chargeOrder = async function chargeOrder() {
       // =========================
       try {
         await printCajeroTicket({
+          order_id: data.order_id ?? tab.order_id,
+          guest_count: tab.guest_count,
           items: tab.items.map(item => ({
             qty: item.qty,
             name: item.item_name,
-            line_total: item.subtotal ?? (item.unit_price * item.qty)
+            line_total: item.subtotal ?? (item.unit_price * item.qty),
+            notes: item.notes
           })),
           total: data.total,
           table: activeTableId,
-          payment_method: payMethod
+          payment_method: payMethod,
+          cash_tendered: tendered,
+          cash_change: data.cash_change
         }, activeTableId, payMethod);
 
       } catch (err) {
