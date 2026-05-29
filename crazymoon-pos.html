@@ -47,6 +47,12 @@
 
       <button
         class="new-tab-btn"
+        onclick="closeShift()">
+        Cerrar turno
+      </button>
+
+      <button
+        class="new-tab-btn"
         onclick="openTableModal()">
         + Mesa
       </button>
@@ -558,6 +564,117 @@ async function openShift() {
 
   showSpinner(false);
 
+}
+
+async function closeShift() {
+
+  showSpinner(true);
+
+  try {
+
+    const currentRes = await fetch(API.shifts + '?action=current');
+
+    const currentData = await currentRes.json();
+
+    const currentShift = currentData.shift;
+
+    if (!currentShift) {
+
+      toast('No hay turno abierto');
+
+      showSpinner(false);
+
+      return;
+    }
+
+    const ok = confirm(
+      'Esto cerrara el turno y generara el Corte Z final. ¿Continuar?'
+    );
+
+    if (!ok) {
+
+      showSpinner(false);
+
+      return;
+    }
+
+    const res = await fetch(API.shifts, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'close',
+        shift_id: currentShift.id,
+        user_id: userId
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+
+      toast('Corte Z generado');
+
+      previewZReport(data);
+
+    } else {
+
+      toast('Error: ' + (data.error || 'no se pudo cerrar turno'));
+
+    }
+
+  } catch(e) {
+
+    toast('Error cerrando turno');
+
+  }
+
+  showSpinner(false);
+
+}
+
+function previewZReport(data) {
+
+  const text = JSON.stringify(data.report || data, null, 2);
+
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const win = window.open('', 'Corte Z', 'width=640,height=760');
+
+  if (!win) {
+
+    console.log(text);
+
+    return;
+  }
+
+  win.document.write(`<!doctype html>
+<html>
+<head>
+<title>Corte Z</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+  color: #111;
+  font-family: "Courier New", monospace;
+}
+pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.4;
+}
+</style>
+</head>
+<body>
+<pre>${escaped}</pre>
+</body>
+</html>`);
+
+  win.document.close();
 }
 
 init();
