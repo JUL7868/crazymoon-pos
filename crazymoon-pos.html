@@ -738,7 +738,97 @@ async function closeShift() {
 
 function previewZReport(data) {
 
-  const text = JSON.stringify(data.report || data, null, 2);
+  const report = data.report || data || {};
+  const rawText = JSON.stringify(report, null, 2);
+
+  const money = value => fmt(parseFloat(value || 0));
+
+  const line = (label, value) => {
+    if (value === undefined || value === null || value === '') return '';
+    return `${label}: ${value}\n`;
+  };
+
+  const moneyLine = (label, value) => `${label}: ${money(value)}\n`;
+
+  const shift = report.shift || {};
+  const sales = report.sales || {};
+  const tax = report.tax_totals || {};
+  const payments = report.payment_totals || {};
+  const byCategory = Array.isArray(report.by_category) ? report.by_category : [];
+  const byStaff = Array.isArray(report.by_staff) ? report.by_staff : [];
+  const expenses = Array.isArray(report.expenses) ? report.expenses : [];
+  const closedAt = shift.closed_at || new Date().toLocaleString('es-MX');
+
+  const categoryLines = byCategory.length
+    ? byCategory.map(row =>
+        `${row.category || 'Categoria'} | Qty: ${row.qty || 0} | Total: ${money(row.total)}`
+      ).join('\n') + '\n'
+    : '';
+
+  const staffLines = byStaff.length
+    ? byStaff.map(row =>
+        `${row.name || 'Sin nombre'} | Ordenes: ${row.orders || 0} | Total: ${money(row.total)}`
+      ).join('\n') + '\n'
+    : '';
+
+  const expenseLines = expenses.length
+    ? expenses.map(row =>
+        `${row.type || 'Gasto'} | Total: ${money(row.total)}`
+      ).join('\n') + '\n'
+    : '';
+
+  const text = [
+    'CORTE Z\n',
+    '================================\n',
+    line('Turno', shift.id),
+    line('Abierto', shift.opened_at),
+    line('Cerrado', closedAt),
+    line('Cajero', shift.closed_by_name || shift.opened_by_name),
+    '\n',
+    'ORDENES\n',
+    '--------------------------------\n',
+    line('Ordenes pagadas', sales.order_count || 0),
+    '\n',
+    'VENTAS ALIMENTOS/BEBIDAS\n',
+    '--------------------------------\n',
+    moneyLine('Venta bruta con IVA', tax.gross_food_drink_sales ?? sales.total_sales),
+    moneyLine('Venta neta sin IVA', tax.net_food_drink_sales),
+    moneyLine('IVA', tax.iva_total),
+    line('IVA tasa', tax.iva_rate !== undefined ? `${tax.iva_rate * 100}%` : ''),
+    '\n',
+    'METODOS DE PAGO\n',
+    '--------------------------------\n',
+    moneyLine('Efectivo', sales.total_cash),
+    moneyLine('Tarjeta', sales.total_card),
+    moneyLine('Mixto', sales.total_split),
+    '\n',
+    'PROPINAS\n',
+    '--------------------------------\n',
+    moneyLine('Propina efectivo', payments.tip_cash),
+    moneyLine('Propina tarjeta', payments.tip_card),
+    moneyLine('Propina total', payments.tip_total),
+    '\n',
+    'TOTAL COBRADO\n',
+    '--------------------------------\n',
+    moneyLine('Total pagado', payments.payment_total),
+    '\n',
+    byCategory.length ? 'CATEGORIAS\n--------------------------------\n' : '',
+    categoryLines,
+    byCategory.length ? '\n' : '',
+    byStaff.length ? 'STAFF\n--------------------------------\n' : '',
+    staffLines,
+    byStaff.length ? '\n' : '',
+    expenses.length || report.total_expenses !== undefined || report.net_cash !== undefined
+      ? 'GASTOS\n--------------------------------\n'
+      : '',
+    expenseLines,
+    report.total_expenses !== undefined ? moneyLine('Total gastos', report.total_expenses) : '',
+    report.net_cash !== undefined ? moneyLine('Efectivo neto', report.net_cash) : '',
+    '\n',
+    'RAW JSON\n',
+    '--------------------------------\n',
+    rawText
+  ].join('');
 
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -749,7 +839,7 @@ function previewZReport(data) {
 
   if (!win) {
 
-    console.log(text);
+    console.log(rawText);
 
     return;
   }
