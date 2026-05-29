@@ -123,12 +123,17 @@ switch ($method) {
                 ]);
             }
 
-            $order_id = db_insert($conn,
-                "INSERT INTO orders (pos_table_id, created_by, guest_count, status) VALUES (?, ?, ?, 'open')",
-                'iii',
-                [$table_id, $input['user_id'] ?? null, $guest_count]
+            $current_shift = db_fetch_one($conn,
+                "SELECT id FROM shifts WHERE status = 'open' ORDER BY opened_at DESC LIMIT 1"
             );
-            $order_id ? respond(['success' => true, 'order_id' => $order_id, 'guest_count' => $guest_count]) : err('Error al abrir orden');
+            if (!$current_shift) err('No hay turno abierto');
+
+            $order_id = db_insert($conn,
+                "INSERT INTO orders (pos_table_id, shift_id, created_by, guest_count, status) VALUES (?, ?, ?, ?, 'open')",
+                'iiii',
+                [$table_id, intval($current_shift['id']), $input['user_id'] ?? null, $guest_count]
+            );
+            $order_id ? respond(['success' => true, 'order_id' => $order_id, 'shift_id' => intval($current_shift['id']), 'guest_count' => $guest_count]) : err('Error al abrir orden');
 
         // ── Add item to order ─────────────────────────────
         } elseif ($action === 'add_item') {
