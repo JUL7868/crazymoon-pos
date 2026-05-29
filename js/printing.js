@@ -246,6 +246,34 @@ window.printCajeroTicket = async function printCajeroTicket(
             data?.amount ??
             0;
 
+        const orderId =
+            data?.order_id ??
+            data?.orderId ??
+            data?.id ??
+            null;
+
+        const cashTendered =
+            data?.cash_tendered ??
+            data?.cash_received ??
+            data?.efectivo_recibido ??
+            null;
+
+        const cashChange =
+            data?.cash_change ??
+            data?.change ??
+            data?.cambio ??
+            null;
+
+        const splitCash =
+            data?.split_cash ??
+            data?.cash_amount ??
+            null;
+
+        const splitCard =
+            data?.split_card ??
+            data?.card_amount ??
+            null;
+
         const ticket = [
 
             '\x1B\x40',
@@ -258,7 +286,13 @@ window.printCajeroTicket = async function printCajeroTicket(
 
             '\x1B\x21\x00',
 
-            'TICKET CAJERO\n',
+            'TICKET DE PAGO\n',
+
+            '========================\n',
+
+            'PRUEBA * PRUEBA * PRUEBA\n',
+
+            '========================\n',
 
             '\x1B\x61\x00',
 
@@ -266,9 +300,11 @@ window.printCajeroTicket = async function printCajeroTicket(
 
             table ? `Mesa: ${String(table)}\n` : '',
 
-            payment ? `Pago: ${String(payment)}\n` : '',
-
             `Fecha: ${new Date().toLocaleString('es-MX')}\n`,
+
+            payment ? `Metodo de pago: ${String(payment)}\n` : '',
+
+            orderId !== null ? `Orden: ${String(orderId)}\n` : '',
 
             '------------------------------\n',
 
@@ -283,6 +319,7 @@ window.printCajeroTicket = async function printCajeroTicket(
                 const name =
                     item.name ??
                     item.item ??
+                    item.item_name ??
                     item.product_name ??
                     item.producto ??
                     'Producto';
@@ -290,11 +327,19 @@ window.printCajeroTicket = async function printCajeroTicket(
                 const lineTotal =
                     item.total ??
                     item.line_total ??
+                    item.subtotal ??
                     item.price ??
+                    item.unit_price ??
                     item.precio ??
                     0;
 
-                return `${String(qty)} x ${String(name)}\n${qzFormatMoney(lineTotal)}\n`;
+                const notes =
+                    item.notes ??
+                    item.note ??
+                    item.nota ??
+                    '';
+
+                return `${String(qty)} x ${String(name)}\n${qzFormatMoney(lineTotal)}\n${notes ? `Nota: ${String(notes)}\n` : ''}`;
 
             }).join(''),
 
@@ -310,9 +355,29 @@ window.printCajeroTicket = async function printCajeroTicket(
 
             '\x1B\x45\x01',
 
-            `TOTAL: ${qzFormatMoney(total)}\n`,
+            `Total: ${qzFormatMoney(total)}\n`,
 
             '\x1B\x45\x00',
+
+            '------------------------------\n',
+
+            payment ? `Pago: ${String(payment)}\n` : '',
+
+            cashTendered !== null
+                ? `Efectivo recibido: ${qzFormatMoney(cashTendered)}\n`
+                : '',
+
+            cashChange !== null
+                ? `Cambio: ${qzFormatMoney(cashChange)}\n`
+                : '',
+
+            splitCash !== null
+                ? `Split efectivo: ${qzFormatMoney(splitCash)}\n`
+                : '',
+
+            splitCard !== null
+                ? `Split tarjeta: ${qzFormatMoney(splitCard)}\n`
+                : '',
 
             '------------------------------\n',
 
