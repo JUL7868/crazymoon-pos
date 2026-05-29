@@ -203,28 +203,40 @@ switch ($method) {
             $order_id       = intval($input['order_id'] ?? 0);
             $payment_method = $input['payment_method'] ?? '';
             $cash_tendered  = floatval($input['cash_tendered'] ?? 0);
+            $tip_cash       = max(0, floatval($input['tip_cash'] ?? 0));
+            $tip_card       = max(0, floatval($input['tip_card'] ?? 0));
 
             if (!$order_id || !$payment_method) err('Datos incompletos');
 
             $order = db_fetch_one($conn, "SELECT * FROM orders WHERE id = ? AND status = 'open'", 'i', [$order_id]);
             if (!$order) err('Orden no encontrada o ya cerrada');
 
-            $total      = floatval($order['total']);
-            $cash_change = ($payment_method === 'cash' || $payment_method === 'split')
-                ? max(0, $cash_tendered - $total)
-                : 0;
+            $total         = floatval($order['total']);
+            $tip_total     = $tip_cash + $tip_card;
+            $payment_total = $total + $tip_total;
+            if ($payment_method === 'cash') {
+                $cash_change = max(0, $cash_tendered - $payment_total);
+            } elseif ($payment_method === 'split') {
+                $cash_change = max(0, $cash_tendered - $total);
+            } else {
+                $cash_change = 0;
+            }
 
             db_update($conn,
-                "UPDATE orders SET status='paid', payment_method=?, cash_tendered=?, cash_change=?, paid_at=NOW(), paid_by=? WHERE id=?",
-                'sddii',
-                [$payment_method, $cash_tendered, $cash_change, $input['user_id'] ?? null, $order_id]
+                "UPDATE orders SET status='paid', payment_method=?, cash_tendered=?, cash_change=?, tip_cash=?, tip_card=?, tip_total=?, payment_total=?, paid_at=NOW(), paid_by=? WHERE id=?",
+                'sddddddii',
+                [$payment_method, $cash_tendered, $cash_change, $tip_cash, $tip_card, $tip_total, $payment_total, $input['user_id'] ?? null, $order_id]
             );
 
             respond([
-                'success'     => true,
-                'order_id'    => $order_id,
-                'total'       => $total,
-                'cash_change' => $cash_change,
+                'success'       => true,
+                'order_id'      => $order_id,
+                'total'         => $total,
+                'cash_change'   => $cash_change,
+                'tip_cash'      => $tip_cash,
+                'tip_card'      => $tip_card,
+                'tip_total'     => $tip_total,
+                'payment_total' => $payment_total,
             ]);
 
         // ── Void order ────────────────────────────────────

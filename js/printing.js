@@ -239,6 +239,24 @@ window.buildCajeroTicketText = function buildCajeroTicketText(
         data?.cambio ??
         null;
 
+    const tipCash =
+        data?.tip_cash ??
+        data?.propina_efectivo ??
+        null;
+
+    const tipCard =
+        data?.tip_card ??
+        data?.propina_tarjeta ??
+        null;
+
+    const tipTotal =
+        data?.tip_total ??
+        null;
+
+    const paymentTotal =
+        data?.payment_total ??
+        null;
+
     const splitCash =
         data?.split_cash ??
         data?.cash_amount ??
@@ -341,6 +359,22 @@ window.buildCajeroTicketText = function buildCajeroTicketText(
             : '',
 
         `TOTAL: ${qzFormatMoney(total)}\n`,
+
+        tipCash !== null || Number(tipCash || 0) > 0
+            ? `PROPINA EFECTIVO: ${qzFormatMoney(tipCash)}\n`
+            : '',
+
+        tipCard !== null || Number(tipCard || 0) > 0
+            ? `PROPINA TARJETA: ${qzFormatMoney(tipCard)}\n`
+            : '',
+
+        tipTotal !== null || Number(tipTotal || 0) > 0
+            ? `PROPINA TOTAL: ${qzFormatMoney(tipTotal)}\n`
+            : '',
+
+        paymentTotal !== null || Number(paymentTotal || 0) > 0
+            ? `TOTAL PAGADO: ${qzFormatMoney(paymentTotal)}\n`
+            : '',
 
         '--------------------------------\n',
 

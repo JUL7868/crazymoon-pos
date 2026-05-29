@@ -169,6 +169,24 @@ switch ($method) {
             // Build final report data
             $data = buildShiftData($conn, $shift_id);
 
+            $payment_totals = db_fetch_one($conn,
+                "SELECT
+                    COALESCE(SUM(tip_cash), 0) as tip_cash,
+                    COALESCE(SUM(tip_card), 0) as tip_card,
+                    COALESCE(SUM(tip_total), 0) as tip_total,
+                    COALESCE(SUM(payment_total), 0) as payment_total
+                 FROM orders
+                 WHERE shift_id = ? AND status = 'paid'",
+                'i', [$shift_id]
+            );
+
+            $data['payment_totals'] = [
+                'tip_cash'      => floatval($payment_totals['tip_cash'] ?? 0),
+                'tip_card'      => floatval($payment_totals['tip_card'] ?? 0),
+                'tip_total'     => floatval($payment_totals['tip_total'] ?? 0),
+                'payment_total' => floatval($payment_totals['payment_total'] ?? 0),
+            ];
+
             $total_sales    = floatval($data['sales']['total_sales']  ?? 0);
             $total_cash     = floatval($data['sales']['total_cash']   ?? 0);
             $total_card     = floatval($data['sales']['total_card']   ?? 0);

@@ -41,13 +41,16 @@
 
       <button
         class="new-tab-btn"
+        id="open-shift-btn"
         onclick="openShift()">
         Abrir turno
       </button>
 
       <button
         class="new-tab-btn"
-        onclick="closeShift()">
+        id="close-shift-btn"
+        onclick="closeShift()"
+        disabled>
         Cerrar turno
       </button>
 
@@ -150,6 +153,34 @@
           class="change-display"
           id="change-display">
         </span>
+
+      </div>
+
+      <div class="cash-row">
+
+        <label>Propina efectivo $</label>
+
+        <input
+          type="number"
+          id="tip-cash"
+          placeholder="0"
+          oninput="calcChange()"
+          step="1"
+          min="0">
+
+      </div>
+
+      <div class="cash-row">
+
+        <label>Propina tarjeta $</label>
+
+        <input
+          type="number"
+          id="tip-card"
+          placeholder="0"
+          oninput="calcChange()"
+          step="1"
+          min="0">
 
       </div>
 
@@ -435,6 +466,7 @@ async function init() {
   renderCats();
   renderMenu();
   renderTabs();
+  await refreshShiftUI();
 
 }
 
@@ -529,6 +561,53 @@ async function loadOrderForTable(table_id, order_id) {
 
 }
 
+async function refreshShiftUI() {
+
+  const openBtn = document.getElementById('open-shift-btn');
+  const closeBtn = document.getElementById('close-shift-btn');
+
+  try {
+
+    const res = await fetch(API.shifts + '?action=current');
+
+    const data = await res.json();
+
+    const hasOpenShift = !!data.shift;
+
+    if (openBtn) {
+
+      openBtn.disabled = hasOpenShift;
+
+      openBtn.textContent = hasOpenShift ? 'Turno abierto' : 'Abrir turno';
+
+    }
+
+    if (closeBtn) {
+
+      closeBtn.disabled = !hasOpenShift;
+
+    }
+
+  } catch(e) {
+
+    if (openBtn) {
+
+      openBtn.disabled = false;
+
+      openBtn.textContent = 'Abrir turno';
+
+    }
+
+    if (closeBtn) {
+
+      closeBtn.disabled = true;
+
+    }
+
+  }
+
+}
+
 async function openShift() {
 
   showSpinner(true);
@@ -549,6 +628,8 @@ async function openShift() {
     if (data.success) {
 
       toast('Turno abierto #' + data.shift_id);
+
+      await refreshShiftUI();
 
     } else {
 
@@ -581,6 +662,8 @@ async function closeShift() {
     if (!currentShift) {
 
       toast('No hay turno abierto');
+
+      await refreshShiftUI();
 
       showSpinner(false);
 
@@ -616,9 +699,13 @@ async function closeShift() {
 
       previewZReport(data);
 
+      await refreshShiftUI();
+
     } else {
 
       toast('Error: ' + (data.error || 'no se pudo cerrar turno'));
+
+      await refreshShiftUI();
 
     }
 

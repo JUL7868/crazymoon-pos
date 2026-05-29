@@ -293,7 +293,10 @@ window.calcChange = function calcChange() {
   const tab = activeTabs[activeTableId];
   const tendered = parseFloat(document.getElementById('cash-tendered').value) || 0;
   const total = tab ? tab.total : 0;
-  const change = tendered - total;
+  const tipCash = Math.max(0, parseFloat(document.getElementById('tip-cash')?.value) || 0);
+  const tipCard = Math.max(0, parseFloat(document.getElementById('tip-card')?.value) || 0);
+  const paymentTotal = total + tipCash + tipCard;
+  const change = tendered - (payMethod === 'cash' ? paymentTotal : total);
   const el = document.getElementById('change-display');
 
   el.textContent = tendered > 0
@@ -318,8 +321,11 @@ window.updateChargeBtn = function updateChargeBtn() {
 
   if (payMethod === 'cash') {
     const tendered = parseFloat(document.getElementById('cash-tendered').value) || 0;
-    btn.disabled = tendered < total;
-    btn.textContent = btn.disabled ? 'INGRESA EFECTIVO' : 'COBRAR ' + fmt(total);
+    const tipCash = Math.max(0, parseFloat(document.getElementById('tip-cash')?.value) || 0);
+    const tipCard = Math.max(0, parseFloat(document.getElementById('tip-card')?.value) || 0);
+    const paymentTotal = total + tipCash + tipCard;
+    btn.disabled = tendered < paymentTotal;
+    btn.textContent = btn.disabled ? 'INGRESA EFECTIVO' : 'COBRAR ' + fmt(paymentTotal);
   } else {
     btn.disabled = false;
     btn.textContent = 'COBRAR ' + fmt(total);
