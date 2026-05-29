@@ -5,6 +5,7 @@ window.chargeOrder = async function chargeOrder() {
   if (!tab || !payMethod) return;
 
   const tendered = parseFloat(document.getElementById('cash-tendered').value) || 0;
+  const cardTendered = Math.max(0, parseFloat(document.getElementById('card-tendered')?.value) || 0);
   const tipCash = Math.max(0, parseFloat(document.getElementById('tip-cash')?.value) || 0);
   const tipCard = Math.max(0, parseFloat(document.getElementById('tip-card')?.value) || 0);
   const tipTotal = tipCash + tipCard;
@@ -20,6 +21,7 @@ window.chargeOrder = async function chargeOrder() {
         order_id: tab.order_id,
         payment_method: payMethod,
         cash_tendered: tendered,
+        card_tendered: cardTendered,
         tip_cash: tipCash,
         tip_card: tipCard,
         tip_total: tipTotal,
@@ -48,6 +50,9 @@ window.chargeOrder = async function chargeOrder() {
           table: activeTableId,
           payment_method: payMethod,
           cash_tendered: tendered,
+          card_tendered: data.card_tendered ?? cardTendered,
+          card_amount: data.card_tendered ?? cardTendered,
+          split_card: data.card_tendered ?? cardTendered,
           cash_change: data.cash_change,
           tip_cash: data.tip_cash ?? tipCash,
           tip_card: data.tip_card ?? tipCard,

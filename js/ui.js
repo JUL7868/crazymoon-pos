@@ -149,6 +149,7 @@ window.selectTable = function selectTable(table_id) {
   });
 
   document.getElementById('cash-input-row').style.display = 'none';
+  document.getElementById('card-input-row').style.display = 'none';
   document.getElementById('change-display').textContent = '';
 
   renderTabs();
@@ -283,6 +284,9 @@ window.selectPay = function selectPay(method) {
   document.getElementById('cash-input-row').style.display =
     (method === 'cash' || method === 'split') ? 'flex' : 'none';
 
+  document.getElementById('card-input-row').style.display =
+    method === 'split' ? 'flex' : 'none';
+
   updateChargeBtn();
   calcChange();
 };
@@ -292,14 +296,16 @@ window.calcChange = function calcChange() {
 
   const tab = activeTabs[activeTableId];
   const tendered = parseFloat(document.getElementById('cash-tendered').value) || 0;
+  const cardTendered = Math.max(0, parseFloat(document.getElementById('card-tendered')?.value) || 0);
   const total = tab ? tab.total : 0;
   const tipCash = Math.max(0, parseFloat(document.getElementById('tip-cash')?.value) || 0);
   const tipCard = Math.max(0, parseFloat(document.getElementById('tip-card')?.value) || 0);
   const paymentTotal = total + tipCash + tipCard;
-  const change = tendered - (payMethod === 'cash' ? paymentTotal : total);
+  const paidTotal = payMethod === 'split' ? tendered + cardTendered : tendered;
+  const change = paidTotal - paymentTotal;
   const el = document.getElementById('change-display');
 
-  el.textContent = tendered > 0
+  el.textContent = paidTotal > 0
     ? (change >= 0 ? 'Cambio: ' + fmt(change) : 'Falta: ' + fmt(Math.abs(change)))
     : '';
 
@@ -326,6 +332,14 @@ window.updateChargeBtn = function updateChargeBtn() {
     const paymentTotal = total + tipCash + tipCard;
     btn.disabled = tendered < paymentTotal;
     btn.textContent = btn.disabled ? 'INGRESA EFECTIVO' : 'COBRAR ' + fmt(paymentTotal);
+  } else if (payMethod === 'split') {
+    const tendered = Math.max(0, parseFloat(document.getElementById('cash-tendered')?.value) || 0);
+    const cardTendered = Math.max(0, parseFloat(document.getElementById('card-tendered')?.value) || 0);
+    const tipCash = Math.max(0, parseFloat(document.getElementById('tip-cash')?.value) || 0);
+    const tipCard = Math.max(0, parseFloat(document.getElementById('tip-card')?.value) || 0);
+    const paymentTotal = total + tipCash + tipCard;
+    btn.disabled = tendered + cardTendered < paymentTotal || cardTendered > paymentTotal;
+    btn.textContent = btn.disabled ? 'INGRESA PAGO' : 'COBRAR ' + fmt(paymentTotal);
   } else {
     btn.disabled = false;
     btn.textContent = 'COBRAR ' + fmt(total);

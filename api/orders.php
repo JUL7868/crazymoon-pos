@@ -202,7 +202,8 @@ switch ($method) {
         } elseif ($action === 'pay') {
             $order_id       = intval($input['order_id'] ?? 0);
             $payment_method = $input['payment_method'] ?? '';
-            $cash_tendered  = floatval($input['cash_tendered'] ?? 0);
+            $cash_tendered  = max(0, floatval($input['cash_tendered'] ?? 0));
+            $card_tendered  = max(0, floatval($input['card_tendered'] ?? 0));
             $tip_cash       = max(0, floatval($input['tip_cash'] ?? 0));
             $tip_card       = max(0, floatval($input['tip_card'] ?? 0));
 
@@ -215,17 +216,25 @@ switch ($method) {
             $tip_total     = $tip_cash + $tip_card;
             $payment_total = $total + $tip_total;
             if ($payment_method === 'cash') {
+                if ($cash_tendered < $payment_total) err('Efectivo insuficiente');
+                $card_tendered = 0;
                 $cash_change = max(0, $cash_tendered - $payment_total);
+            } elseif ($payment_method === 'card') {
+                $cash_tendered = 0;
+                if ($card_tendered <= 0) $card_tendered = $payment_total;
+                $cash_change = 0;
             } elseif ($payment_method === 'split') {
-                $cash_change = max(0, $cash_tendered - $total);
+                if ($card_tendered > $payment_total) err('Monto de tarjeta mayor al total');
+                if ($cash_tendered + $card_tendered < $payment_total) err('Pago insuficiente');
+                $cash_change = max(0, $cash_tendered + $card_tendered - $payment_total);
             } else {
                 $cash_change = 0;
             }
 
             db_update($conn,
-                "UPDATE orders SET status='paid', payment_method=?, cash_tendered=?, cash_change=?, tip_cash=?, tip_card=?, tip_total=?, payment_total=?, paid_at=NOW(), paid_by=? WHERE id=?",
-                'sddddddii',
-                [$payment_method, $cash_tendered, $cash_change, $tip_cash, $tip_card, $tip_total, $payment_total, $input['user_id'] ?? null, $order_id]
+                "UPDATE orders SET status='paid', payment_method=?, cash_tendered=?, card_tendered=?, cash_change=?, tip_cash=?, tip_card=?, tip_total=?, payment_total=?, paid_at=NOW(), paid_by=? WHERE id=?",
+                'sdddddddii',
+                [$payment_method, $cash_tendered, $card_tendered, $cash_change, $tip_cash, $tip_card, $tip_total, $payment_total, $input['user_id'] ?? null, $order_id]
             );
 
             respond([
@@ -233,6 +242,7 @@ switch ($method) {
                 'order_id'      => $order_id,
                 'total'         => $total,
                 'cash_change'   => $cash_change,
+                'card_tendered' => $card_tendered,
                 'tip_cash'      => $tip_cash,
                 'tip_card'      => $tip_card,
                 'tip_total'     => $tip_total,
