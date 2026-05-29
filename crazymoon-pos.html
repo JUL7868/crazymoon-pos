@@ -41,6 +41,12 @@
 
       <button
         class="new-tab-btn"
+        onclick="openShift()">
+        Abrir turno
+      </button>
+
+      <button
+        class="new-tab-btn"
         onclick="openTableModal()">
         + Mesa
       </button>
@@ -391,6 +397,7 @@ const API = {
   tables: BASE + '/tables.php',
   orders: BASE + '/orders.php',
   auth:   BASE + '/auth.php',
+  shifts: BASE + '/shifts.php',
 };
 
 const CATS = [
@@ -513,6 +520,43 @@ async function loadOrderForTable(table_id, order_id) {
     }
 
   } catch(e) {}
+
+}
+
+async function openShift() {
+
+  showSpinner(true);
+
+  try {
+
+    const res = await fetch(API.shifts, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'open',
+        user_id: userId
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+
+      toast('Turno abierto #' + data.shift_id);
+
+    } else {
+
+      toast('Error: ' + (data.error || 'no se pudo abrir turno'));
+
+    }
+
+  } catch(e) {
+
+    toast('Error abriendo turno');
+
+  }
+
+  showSpinner(false);
 
 }
 
