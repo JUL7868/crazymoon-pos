@@ -172,6 +172,293 @@ window.qzBuzzPrinter = async function qzBuzzPrinter(printerName) {
 
 
 // =========================
+// BUILD CAJERO TICKET TEXT
+// =========================
+
+window.buildCajeroTicketText = function buildCajeroTicketText(
+    data,
+    activeTableId,
+    payMethod
+) {
+
+    const items =
+        Array.isArray(data) ? data :
+        Array.isArray(data?.items) ? data.items :
+        Array.isArray(data?.cart) ? data.cart :
+        Array.isArray(data?.lines) ? data.lines :
+        Array.isArray(data?.order_items) ? data.order_items :
+        [];
+
+    const table =
+        activeTableId ||
+        data?.table ||
+        data?.table_id ||
+        data?.mesa ||
+        '';
+
+    const payment =
+        payMethod ||
+        data?.payMethod ||
+        data?.payment_method ||
+        data?.metodo_pago ||
+        '';
+
+    const subtotal =
+        data?.subtotal ??
+        data?.ventas_subtotal ??
+        null;
+
+    const tax =
+        data?.tax ??
+        data?.iva ??
+        data?.ventas_iva ??
+        null;
+
+    const total =
+        data?.total ??
+        data?.ventas_total ??
+        data?.grand_total ??
+        data?.amount ??
+        0;
+
+    const orderId =
+        data?.order_id ??
+        data?.orderId ??
+        data?.id ??
+        null;
+
+    const cashTendered =
+        data?.cash_tendered ??
+        data?.cash_received ??
+        data?.efectivo_recibido ??
+        null;
+
+    const cashChange =
+        data?.cash_change ??
+        data?.change ??
+        data?.cambio ??
+        null;
+
+    const splitCash =
+        data?.split_cash ??
+        data?.cash_amount ??
+        null;
+
+    const splitCard =
+        data?.split_card ??
+        data?.card_amount ??
+        null;
+
+    const guestCount =
+        data?.guest_count ??
+        data?.guestCount ??
+        data?.personas ??
+        null;
+
+    const itemLines = items.map(item => {
+
+        const qty =
+            item.qty ??
+            item.quantity ??
+            item.cantidad ??
+            1;
+
+        const name =
+            item.name ??
+            item.item ??
+            item.item_name ??
+            item.product_name ??
+            item.producto ??
+            'Producto';
+
+        const lineTotal =
+            item.total ??
+            item.line_total ??
+            item.subtotal ??
+            item.price ??
+            item.unit_price ??
+            item.precio ??
+            0;
+
+        const notes =
+            item.notes ??
+            item.note ??
+            item.nota ??
+            '';
+
+        const qtyText = String(qty).padEnd(6).slice(0, 6);
+        const nameText = String(name).padEnd(18).slice(0, 18);
+        const amountText = qzFormatMoney(lineTotal).padStart(8).slice(-8);
+
+        return `${qtyText}${nameText}${amountText}\n${notes ? `      NOTA: ${String(notes)}\n` : ''}`;
+
+    }).join('');
+
+    return [
+
+        'AGUILAR & LORD S.A. DE C.V.\n',
+
+        'RFC: ALI171108C94\n',
+
+        'AV. MIGUEL HIDALGO NUM 106A SAN PEDRO\n',
+
+        'CHOLULA PUEBLA MEXICO CP 72760\n',
+
+        '========================\n',
+
+        'PRUEBA * PRUEBA * PRUEBA\n',
+
+        '========================\n',
+
+        '--------------------------------\n',
+
+        table ? `MESA: ${String(table)}\n` : '',
+
+        orderId !== null ? `FOLIO: ${String(orderId)}\n` : '',
+
+        `FECHA: ${new Date().toLocaleString('es-MX')}\n`,
+
+        orderId !== null ? `ORDEN: ${String(orderId)}\n` : '',
+
+        guestCount !== null ? `PERSONAS: ${String(guestCount)}\n` : '',
+
+        '--------------------------------\n',
+
+        'CANT  DESCRIPCION        IMPORTE\n',
+
+        '--------------------------------\n',
+
+        itemLines,
+
+        '--------------------------------\n',
+
+        subtotal !== null
+            ? `SUBTOTAL: ${qzFormatMoney(subtotal)}\n`
+            : '',
+
+        tax !== null
+            ? `IVA: ${qzFormatMoney(tax)}\n`
+            : '',
+
+        `TOTAL: ${qzFormatMoney(total)}\n`,
+
+        '--------------------------------\n',
+
+        payment ? `PAGO: ${String(payment)}\n` : '',
+
+        cashTendered !== null
+            ? `EFECTIVO RECIBIDO: ${qzFormatMoney(cashTendered)}\n`
+            : '',
+
+        cashChange !== null
+            ? `CAMBIO: ${qzFormatMoney(cashChange)}\n`
+            : '',
+
+        splitCash !== null
+            ? `SPLIT EFECTIVO: ${qzFormatMoney(splitCash)}\n`
+            : '',
+
+        splitCard !== null
+            ? `SPLIT TARJETA: ${qzFormatMoney(splitCard)}\n`
+            : '',
+
+        '--------------------------------\n',
+
+        'GRACIAS POR SU PREFERENCIA\n',
+
+        'ESTE NO ES UN COMPROBANTE FISCAL\n'
+
+    ].join('');
+}
+
+
+// =========================
+// PREVIEW CAJERO TICKET
+// =========================
+
+window.previewCajeroTicketWindow = function previewCajeroTicketWindow(
+    data,
+    activeTableId,
+    payMethod
+) {
+
+    const ticket = window.buildCajeroTicketText(
+        data,
+        activeTableId,
+        payMethod
+    );
+
+    const escaped = String(ticket)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const win = window.open('', 'Vista previa ticket cajero', 'width=420,height=700');
+
+    if (!win) {
+
+        console.log(ticket);
+
+        return ticket;
+    }
+
+    win.document.write(`<!doctype html>
+<html>
+<head>
+<title>Vista previa ticket cajero</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+}
+.receipt {
+  width: 300px;
+  margin: 0 auto;
+  color: #000;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+<pre class="receipt">${escaped}</pre>
+</body>
+</html>`);
+
+    win.document.close();
+
+    return ticket;
+}
+
+
+function buildCajeroTicketRaw(data, activeTableId, payMethod) {
+
+    return [
+
+        '\x1B\x40',
+
+        '\x1B\x61\x01',
+
+        window.buildCajeroTicketText(
+            data,
+            activeTableId,
+            payMethod
+        ),
+
+        '\x1B\x61\x00',
+
+        '\n\n\n\n',
+
+        '\x1D\x56\x00'
+
+    ].join('');
+}
+
+
+// =========================
 // PRINT CAJERO TICKET
 // =========================
 
@@ -206,192 +493,11 @@ window.printCajeroTicket = async function printCajeroTicket(
             encoding: 'CP437'
         });
 
-        const items =
-            Array.isArray(data) ? data :
-            Array.isArray(data?.items) ? data.items :
-            Array.isArray(data?.cart) ? data.cart :
-            Array.isArray(data?.lines) ? data.lines :
-            Array.isArray(data?.order_items) ? data.order_items :
-            [];
-
-        const table =
-            activeTableId ||
-            data?.table ||
-            data?.table_id ||
-            data?.mesa ||
-            '';
-
-        const payment =
-            payMethod ||
-            data?.payMethod ||
-            data?.payment_method ||
-            data?.metodo_pago ||
-            '';
-
-        const subtotal =
-            data?.subtotal ??
-            data?.ventas_subtotal ??
-            null;
-
-        const tax =
-            data?.tax ??
-            data?.iva ??
-            data?.ventas_iva ??
-            null;
-
-        const total =
-            data?.total ??
-            data?.ventas_total ??
-            data?.grand_total ??
-            data?.amount ??
-            0;
-
-        const orderId =
-            data?.order_id ??
-            data?.orderId ??
-            data?.id ??
-            null;
-
-        const cashTendered =
-            data?.cash_tendered ??
-            data?.cash_received ??
-            data?.efectivo_recibido ??
-            null;
-
-        const cashChange =
-            data?.cash_change ??
-            data?.change ??
-            data?.cambio ??
-            null;
-
-        const splitCash =
-            data?.split_cash ??
-            data?.cash_amount ??
-            null;
-
-        const splitCard =
-            data?.split_card ??
-            data?.card_amount ??
-            null;
-
-        const ticket = [
-
-            '\x1B\x40',
-
-            '\x1B\x61\x01',
-
-            '\x1B\x21\x10',
-
-            'CRAZY MOON\n',
-
-            '\x1B\x21\x00',
-
-            'TICKET DE PAGO\n',
-
-            '========================\n',
-
-            'PRUEBA * PRUEBA * PRUEBA\n',
-
-            '========================\n',
-
-            '\x1B\x61\x00',
-
-            '------------------------------\n',
-
-            table ? `Mesa: ${String(table)}\n` : '',
-
-            `Fecha: ${new Date().toLocaleString('es-MX')}\n`,
-
-            payment ? `Metodo de pago: ${String(payment)}\n` : '',
-
-            orderId !== null ? `Orden: ${String(orderId)}\n` : '',
-
-            '------------------------------\n',
-
-            items.map(item => {
-
-                const qty =
-                    item.qty ??
-                    item.quantity ??
-                    item.cantidad ??
-                    1;
-
-                const name =
-                    item.name ??
-                    item.item ??
-                    item.item_name ??
-                    item.product_name ??
-                    item.producto ??
-                    'Producto';
-
-                const lineTotal =
-                    item.total ??
-                    item.line_total ??
-                    item.subtotal ??
-                    item.price ??
-                    item.unit_price ??
-                    item.precio ??
-                    0;
-
-                const notes =
-                    item.notes ??
-                    item.note ??
-                    item.nota ??
-                    '';
-
-                return `${String(qty)} x ${String(name)}\n${qzFormatMoney(lineTotal)}\n${notes ? `Nota: ${String(notes)}\n` : ''}`;
-
-            }).join(''),
-
-            '------------------------------\n',
-
-            subtotal !== null
-                ? `Subtotal: ${qzFormatMoney(subtotal)}\n`
-                : '',
-
-            tax !== null
-                ? `IVA: ${qzFormatMoney(tax)}\n`
-                : '',
-
-            '\x1B\x45\x01',
-
-            `Total: ${qzFormatMoney(total)}\n`,
-
-            '\x1B\x45\x00',
-
-            '------------------------------\n',
-
-            payment ? `Pago: ${String(payment)}\n` : '',
-
-            cashTendered !== null
-                ? `Efectivo recibido: ${qzFormatMoney(cashTendered)}\n`
-                : '',
-
-            cashChange !== null
-                ? `Cambio: ${qzFormatMoney(cashChange)}\n`
-                : '',
-
-            splitCash !== null
-                ? `Split efectivo: ${qzFormatMoney(splitCash)}\n`
-                : '',
-
-            splitCard !== null
-                ? `Split tarjeta: ${qzFormatMoney(splitCard)}\n`
-                : '',
-
-            '------------------------------\n',
-
-            '\x1B\x61\x01',
-
-            'Gracias por su visita\n',
-
-            '\x1B\x61\x00',
-
-            '\n\n\n\n',
-
-            '\x1D\x56\x00'
-
-        ].join('');
+        const ticket = buildCajeroTicketRaw(
+            data,
+            activeTableId,
+            payMethod
+        );
 
         await qz.print(config, [{
 
