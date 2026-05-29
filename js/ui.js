@@ -195,6 +195,22 @@ window.confirmSize = async function confirmSize(ml) {
   pendingTapItem = null;
 };
 
+window.ensureCuentaButton = function ensureCuentaButton() {
+  const payEl = document.getElementById('pay-section');
+  const chargeBtn = document.getElementById('charge-btn');
+
+  if (!payEl || !chargeBtn || document.getElementById('print-cuenta-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'clear-btn';
+  btn.id = 'print-cuenta-btn';
+  btn.type = 'button';
+  btn.textContent = 'Imprimir cuenta';
+  btn.onclick = printActiveCuenta;
+
+  payEl.insertBefore(btn, chargeBtn);
+};
+
 window.renderOrder = function renderOrder() {
   const tab = activeTabs[activeTableId];
 
@@ -252,6 +268,7 @@ window.renderOrder = function renderOrder() {
   totalsEl.style.display = 'block';
   payEl.style.display = 'flex';
 
+  ensureCuentaButton();
   updateChargeBtn();
 };
 
@@ -336,6 +353,44 @@ window.clearOrder = async function clearOrder() {
 
   } catch (e) {
     toast('Error');
+  }
+
+  showSpinner(false);
+};
+
+window.printActiveCuenta = async function printActiveCuenta() {
+  const tab = activeTabs[activeTableId];
+
+  if (!activeTableId || !tab) {
+    toast('Selecciona una mesa primero');
+    return;
+  }
+
+  if (!tab.items.length) {
+    toast('No hay articulos en la cuenta');
+    return;
+  }
+
+  showSpinner(true);
+
+  try {
+    const ok = await printCuentaTicket({
+      order_id: tab.order_id,
+      guest_count: tab.guest_count,
+      items: tab.items.map(item => ({
+        qty: item.qty,
+        item_name: item.item_name,
+        subtotal: item.subtotal ?? (item.unit_price * item.qty),
+        notes: item.notes
+      })),
+      total: tab.total,
+      table: activeTableId
+    }, activeTableId);
+
+    if (ok) toast('Cuenta enviada a impresora');
+
+  } catch (e) {
+    toast('Error imprimiendo cuenta');
   }
 
   showSpinner(false);

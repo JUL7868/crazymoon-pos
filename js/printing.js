@@ -459,6 +459,300 @@ function buildCajeroTicketRaw(data, activeTableId, payMethod) {
 
 
 // =========================
+// BUILD CUENTA TICKET TEXT
+// =========================
+
+window.buildCuentaTicketText = function buildCuentaTicketText(
+    data,
+    activeTableId
+) {
+
+    const items =
+        Array.isArray(data) ? data :
+        Array.isArray(data?.items) ? data.items :
+        Array.isArray(data?.cart) ? data.cart :
+        Array.isArray(data?.lines) ? data.lines :
+        Array.isArray(data?.order_items) ? data.order_items :
+        [];
+
+    const table =
+        activeTableId ||
+        data?.table ||
+        data?.table_id ||
+        data?.mesa ||
+        '';
+
+    const subtotal =
+        data?.subtotal ??
+        data?.ventas_subtotal ??
+        null;
+
+    const tax =
+        data?.tax ??
+        data?.iva ??
+        data?.ventas_iva ??
+        null;
+
+    const total =
+        data?.total ??
+        data?.ventas_total ??
+        data?.grand_total ??
+        data?.amount ??
+        0;
+
+    const orderId =
+        data?.order_id ??
+        data?.orderId ??
+        data?.id ??
+        null;
+
+    const guestCount =
+        data?.guest_count ??
+        data?.guestCount ??
+        data?.personas ??
+        null;
+
+    const itemLines = items.map(item => {
+
+        const qty =
+            item.qty ??
+            item.quantity ??
+            item.cantidad ??
+            1;
+
+        const name =
+            item.name ??
+            item.item ??
+            item.item_name ??
+            item.product_name ??
+            item.producto ??
+            'Producto';
+
+        const lineTotal =
+            item.total ??
+            item.line_total ??
+            item.subtotal ??
+            item.price ??
+            item.unit_price ??
+            item.precio ??
+            0;
+
+        const notes =
+            item.notes ??
+            item.note ??
+            item.nota ??
+            '';
+
+        const qtyText = String(qty).padEnd(6).slice(0, 6);
+        const nameText = String(name).padEnd(18).slice(0, 18);
+        const amountText = qzFormatMoney(lineTotal).padStart(8).slice(-8);
+
+        return `${qtyText}${nameText}${amountText}\n${notes ? `      NOTA: ${String(notes)}\n` : ''}`;
+
+    }).join('');
+
+    return [
+
+        'AGUILAR & LORD S.A. DE C.V.\n',
+
+        'RFC: ALI171108C94\n',
+
+        'AV. MIGUEL HIDALGO NUM 106A SAN PEDRO\n',
+
+        'CHOLULA PUEBLA MEXICO CP 72760\n',
+
+        '========================\n',
+
+        'PRUEBA * PRUEBA * PRUEBA\n',
+
+        '========================\n',
+
+        'CUENTA\n',
+
+        '--------------------------------\n',
+
+        table ? `MESA: ${String(table)}\n` : '',
+
+        `FECHA: ${new Date().toLocaleString('es-MX')}\n`,
+
+        orderId !== null ? `ORDEN: ${String(orderId)}\n` : '',
+
+        guestCount !== null ? `PERSONAS: ${String(guestCount)}\n` : '',
+
+        '--------------------------------\n',
+
+        'CANT  DESCRIPCION        IMPORTE\n',
+
+        '--------------------------------\n',
+
+        itemLines,
+
+        '--------------------------------\n',
+
+        subtotal !== null
+            ? `SUBTOTAL: ${qzFormatMoney(subtotal)}\n`
+            : '',
+
+        tax !== null
+            ? `IVA: ${qzFormatMoney(tax)}\n`
+            : '',
+
+        `TOTAL: ${qzFormatMoney(total)}\n`,
+
+        '--------------------------------\n',
+
+        'GRACIAS POR SU PREFERENCIA\n',
+
+        'ESTE NO ES UN COMPROBANTE FISCAL\n'
+
+    ].join('');
+}
+
+
+function buildCuentaTicketRaw(data, activeTableId) {
+
+    return [
+
+        '\x1B\x40',
+
+        '\x1B\x61\x01',
+
+        window.buildCuentaTicketText(
+            data,
+            activeTableId
+        ),
+
+        '\x1B\x61\x00',
+
+        '\n\n\n\n',
+
+        '\x1D\x56\x00'
+
+    ].join('');
+}
+
+
+window.previewCuentaTicketWindow = function previewCuentaTicketWindow(
+    data,
+    activeTableId
+) {
+
+    const ticket = window.buildCuentaTicketText(
+        data,
+        activeTableId
+    );
+
+    const escaped = String(ticket)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const win = window.open('', 'Vista previa cuenta', 'width=420,height=700');
+
+    if (!win) {
+
+        console.log(ticket);
+
+        return ticket;
+    }
+
+    win.document.write(`<!doctype html>
+<html>
+<head>
+<title>Vista previa cuenta</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+}
+.receipt {
+  width: 300px;
+  margin: 0 auto;
+  color: #000;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+<pre class="receipt">${escaped}</pre>
+</body>
+</html>`);
+
+    win.document.close();
+
+    return ticket;
+}
+
+
+window.printCuentaTicket = async function printCuentaTicket(
+    data,
+    activeTableId
+) {
+
+    try {
+
+        const ok = await qzConnectSafe();
+
+        if (!ok) return false;
+
+        const printer = await qz.printers.find("Cajero");
+
+        if (!printer) {
+
+            console.error("Printer 'Cajero' not found");
+
+            if (typeof toast === "function") {
+
+                toast('Impresora de cajero no encontrada');
+
+            }
+
+            return false;
+        }
+
+        const config = qz.configs.create(printer, {
+            encoding: 'CP437'
+        });
+
+        const ticket = buildCuentaTicketRaw(
+            data,
+            activeTableId
+        );
+
+        await qz.print(config, [{
+
+            type: 'raw',
+
+            format: 'command',
+
+            data: ticket
+
+        }]);
+
+        console.log("CUENTA PRINT OK");
+
+        return true;
+
+    } catch (err) {
+
+        console.error("CUENTA PRINT ERROR:", err);
+
+        if (typeof toast === "function") {
+
+            toast('Error imprimiendo cuenta');
+
+        }
+
+        return false;
+    }
+}
+
+
+// =========================
 // PRINT CAJERO TICKET
 // =========================
 
